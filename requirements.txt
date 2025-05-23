@@ -1,0 +1,4 @@
+#Requirements to properly run the program:
+
+kivy
+

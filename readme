@@ -1,0 +1,11 @@
+| Status      | Direction       | Data Fields                  | Purpose                              |
+|-------------|-----------------|------------------------------|--------------------------------------|
+| `join`      | Client → Server | `username`                   | Client joins the game                |
+| `bet`       | Client → Server | `amount`                     | Player places bet                    |
+| `hit`       | Client → Server | *(empty)*                    | Player asks for a card               |
+| `stand`     | Client → Server | *(empty)*                    | Player ends their turn               |
+| `double`    | Client → Server | *(empty)*                    | Player doubles their bet             |
+| `update`    | Server → Client | full game state              | Broadcast new game state             |
+| `error`     | Server → Client | `message`                    | Explain what went wrong              |
+| `round_end` | Server → Client | `winners` list               | Who won                              |
+| `reset`     | Server → Client | *(empty)*                    | Signal round has reset               |

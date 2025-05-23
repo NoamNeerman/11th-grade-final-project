@@ -1,77 +1,86 @@
-from pClass import Player
-from blackjack import blackjack_game  # or whatever your blackjack game file is named
+import random
+from kivy.app import App
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.button import Button
+from kivy.uix.label import Label
+from kivy.uix.popup import Popup
 
-def main():
-    game = blackjack_game()
+# Card values
+CARD_VALUES = {
+    '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9,
+    '10': 10, 'J': 10, 'Q': 10, 'K': 10, 'A': 11
+}
 
-    num_players = int(input("How many players? "))
-    for i in range(num_players):
-        username = input(f"Enter name for player {i + 1}: ")
-        player = Player(username)
-        game.joinGame(player)
+# Deck of cards
+DECK = [f"{rank}♥" for rank in CARD_VALUES] + [f"{rank}♦" for rank in CARD_VALUES] + \
+       [f"{rank}♠" for rank in CARD_VALUES] + [f"{rank}♣" for rank in CARD_VALUES]
 
-    while True:
-        print("\n--- New Round ---\n")
-        game.resetGame()
 
-        # Betting phase
-        game.current_phase = "betting"
-        for player in game.players:
-            while True:
-                try:
-                    bet = int(input(f"{player.username}, you have ${player.cash}. Place your bet: "))
-                    player.place_bet(bet)
-                    break
-                except ValueError as e:
-                    print(e)
+class BlackjackGame(BoxLayout):
+    def __init__(self, **kwargs):
+        super().__init__(orientation='vertical', spacing=10, **kwargs)
+        self.deck = DECK.copy()
+        random.shuffle(self.deck)
 
-        # Dealing phase
-        game.advance_phase()
-        game.firstDeal()
+        self.player_hand = []
+        self.dealer_hand = []
 
-        # Player turns
-        game.advance_phase()
-        while game.current_phase == "player_turns":
-            player = game.get_current_player()
-            if player.isInGame and not player.standing:
-                print(f"\n{player.username}'s turn!")
-                print(f"Your hand: {player.hand} (Total: {game.sumHand(player.hand)})")
-                print(f"Dealer shows: {game.dealer[0]}")
-                move = input("Choose action: (h)it, (s)tand, (d)ouble down: ").lower()
+        self.label = Label(text="Welcome to Blackjack!", font_size="24sp", color=[1, 0, 0, 1])  # Red text
+        self.add_widget(self.label)
 
-                if move == 'h':
-                    game.deal(player)
-                elif move == 's':
-                    game.stand(player)
-                    game.next_player()
-                elif move == 'd':
-                    try:
-                        game.double_down(player)
-                    except ValueError as e:
-                        print(e)
-                else:
-                    print("Invalid choice, please pick again.")
-            else:
-                game.next_player()
+        self.hit_button = Button(text="Hit", font_size="20sp", background_color=[0, 0, 0, 1], color=[1, 1, 1, 1])
+        self.hit_button.bind(on_press=self.hit)
+        self.add_widget(self.hit_button)
 
-        # Dealer's turn
-        game.dealer_turn()
-        print("\nDealer's hand:", game.dealer, "(Total:", game.sumHand(game.dealer), ")")
+        self.stand_button = Button(text="Stand", font_size="20sp", background_color=[1, 0, 0, 1], color=[1, 1, 1, 1])
+        self.stand_button.bind(on_press=self.stand)
+        self.add_widget(self.stand_button)
 
-        # Payout phase
-        game.advance_phase()
-        print("\n--- Results ---")
-        winners = game.getWinners()
+        self.deal_button = Button(text="Deal", font_size="20sp", background_color=[0, 0, 0, 1], color=[1, 1, 1, 1])
+        self.deal_button.bind(on_press=self.deal)
+        self.add_widget(self.deal_button)
 
-        for p in game.players:
-            status = "WON" if p.username in winners else "LOST"
-            print(f"{p.username}: {status}, Cash: ${p.cash}")
+    def deal(self, instance):
+        self.player_hand = [self.deck.pop(), self.deck.pop()]
+        self.dealer_hand = [self.deck.pop()]
+        self.update_label()
 
-        # Check if players want to continue
-        cont = input("\nPlay another round? (y/n): ").lower()
-        if cont != 'y':
-            print("Thanks for playing!")
-            break
+    def hit(self, instance):
+        self.player_hand.append(self.deck.pop())
+        if self.get_hand_value(self.player_hand) > 21:
+            self.show_popup("Bust! You lose!")
+        self.update_label()
+
+    def stand(self, instance):
+        while self.get_hand_value(self.dealer_hand) < 17:
+            self.dealer_hand.append(self.deck.pop())
+
+        if self.get_hand_value(self.dealer_hand) > 21 or self.get_hand_value(self.player_hand) > self.get_hand_value(self.dealer_hand):
+            self.show_popup("You win!")
+        else:
+            self.show_popup("Dealer wins!")
+        self.update_label()
+
+    def get_hand_value(self, hand):
+        value = sum(CARD_VALUES[card[:-1]] for card in hand)
+        if value > 21 and any(card.startswith("A") for card in hand):
+            value -= 10
+        return value
+
+    def update_label(self):
+        self.label.text = f"Player: {' '.join(self.player_hand)}\nDealer: {' '.join(self.dealer_hand)}"
+
+    def show_popup(self, message):
+        popup = Popup(title="Game Over",
+                      content=Label(text=message, font_size="20sp"),
+                      size_hint=(None, None), size=(300, 200))
+        popup.open()
+
+
+class BlackjackApp(App):
+    def build(self):
+        return BlackjackGame()
+
 
 if __name__ == "__main__":
-    main()
+    BlackjackApp().run()
